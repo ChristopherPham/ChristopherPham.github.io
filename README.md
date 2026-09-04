@@ -1,4 +1,30 @@
-# React + TypeScript + Vite
+# Personal portfolio
+
+## Bedrock chat
+
+The home page chat calls the local `/api/chat` proxy. Keep the Bedrock API key on the server and never add it to a `VITE_*` variable.
+
+1. Create a local `.env` file with the key and region:
+
+```bash
+AWS_BEARER_TOKEN_BEDROCK=your-bedrock-api-key
+AWS_REGION=us-west-2
+BEDROCK_MODEL=openai.gpt-oss-20b-1:0
+```
+
+2. Start the chat API in one terminal:
+
+```bash
+npm run server
+```
+
+3. Start Vite in another terminal:
+
+```bash
+npm run dev
+```
+
+The `BEDROCK_MODEL` value must be enabled for your AWS account and region.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
