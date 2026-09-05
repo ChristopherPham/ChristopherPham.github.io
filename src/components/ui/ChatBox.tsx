@@ -12,6 +12,7 @@ const welcomeMessage: Message = {
 };
 
 export default function ChatBox() {
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,9 +37,22 @@ export default function ChatBox() {
         body: JSON.stringify({ messages: nextMessages }),
       });
 
-      const data = (await response.json()) as { message?: string; error?: string };
+      const responseText = await response.text();
+      let data: { message?: string; error?: string } = {};
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { message?: string; error?: string };
+        } catch {
+          throw new Error(`The chat server returned an invalid response (HTTP ${response.status}).`);
+        }
+      }
+
       if (!response.ok || !data.message) {
-        throw new Error(data.error || "The assistant could not respond.");
+        throw new Error(
+          data.error ||
+            `The chat server could not respond (HTTP ${response.status}). Make sure npm run server is running.`,
+        );
       }
 
       setMessages((currentMessages) => [
@@ -52,11 +66,34 @@ export default function ChatBox() {
     }
   }
 
+  if (!isOpen) {
+    return (
+      <button
+        aria-label="Open portfolio assistant"
+        className="fixed bottom-6 right-6 z-50 rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-zinc-950 shadow-2xl shadow-black/30 transition hover:bg-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+        onClick={() => setIsOpen(true)}
+        type="button"
+      >
+        Ask me about Christopher's work
+      </button>
+    );
+  }
+
   return (
-    <section className="mx-auto mt-20 max-w-2xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 shadow-2xl shadow-black/20">
-      <div className="border-b border-zinc-800 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Portfolio assistant</p>
-        <h2 className="mt-1 text-xl font-semibold text-white">Curious about my work?</h2>
+    <section className="fixed bottom-6 right-6 z-50 flex w-[calc(100vw-3rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/95 shadow-2xl shadow-black/40 backdrop-blur-sm">
+      <div className="flex items-start justify-between border-b border-zinc-800 px-5 py-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Portfolio assistant</p>
+          <h2 className="mt-1 text-xl font-semibold text-white">Curious about my work?</h2>
+        </div>
+        <button
+          aria-label="Close portfolio assistant"
+          className="rounded-lg px-2 py-1 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300"
+          onClick={() => setIsOpen(false)}
+          type="button"
+        >
+          Close
+        </button>
       </div>
 
       <div className="flex max-h-80 min-h-48 flex-col gap-3 overflow-y-auto px-5 py-5" aria-live="polite">

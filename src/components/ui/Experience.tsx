@@ -1,6 +1,6 @@
 function Experience() {
   return (
-    <section id="experience">
+    <section>
       <h2>Experience</h2>
       <p>Here is a list of my professional experience.</p>
       {}
