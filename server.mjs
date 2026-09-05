@@ -5,6 +5,20 @@ const port = Number(process.env.PORT || 3001);
 const region = process.env.AWS_REGION || "us-west-2";
 const model = process.env.BEDROCK_MODEL || "openai.gpt-oss-20b-1:0";
 
+// Replace this with data from a database or CMS when the portfolio content grows.
+const portfolioContext = `
+You are the assistant for Christopher Pham's software engineering portfolio.
+Use only the portfolio information included below and the conversation messages.
+Do not invent employers, dates, project details, technologies, or achievements.
+If the answer is not included, say that the information is not available yet.
+
+Portfolio information:
+- Name: Christopher Pham
+- Role: Software Engineer and AI Developer
+- The site is a React and TypeScript portfolio application.
+- The site includes an AI portfolio assistant.
+`;
+
 const client = process.env.AWS_BEARER_TOKEN_BEDROCK
   ? new OpenAI({
       apiKey: process.env.AWS_BEARER_TOKEN_BEDROCK,
@@ -69,7 +83,10 @@ const server = createServer(async (request, response) => {
 
     const completion = await client.chat.completions.create({
       model,
-      messages: validMessages.slice(-20),
+      messages: [
+        { role: "system", content: portfolioContext },
+        ...validMessages.slice(-20),
+      ],
       max_tokens: 500,
     });
     sendJson(response, 200, { message: completion.choices[0]?.message?.content || "" });
