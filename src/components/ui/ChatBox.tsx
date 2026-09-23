@@ -31,20 +31,27 @@ export default function ChatBox() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages }),
-      });
-
+      const response = await fetch(
+        "https://fgnk4k1tj3.execute-api.us-west-2.amazonaws.com/api/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: nextMessages }),
+        },
+      );
       const responseText = await response.text();
       let data: { message?: string; error?: string } = {};
 
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { message?: string; error?: string };
+          data = JSON.parse(responseText) as {
+            message?: string;
+            error?: string;
+          };
         } catch {
-          throw new Error(`The chat server returned an invalid response (HTTP ${response.status}).`);
+          throw new Error(
+            `The chat server returned an invalid response (HTTP ${response.status}).`,
+          );
         }
       }
 
@@ -60,7 +67,11 @@ export default function ChatBox() {
         { role: "assistant", content: data.message as string },
       ]);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Something went wrong.");
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Something went wrong.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -83,8 +94,12 @@ export default function ChatBox() {
     <section className="fixed bottom-6 right-6 z-50 flex w-[calc(100vw-3rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/95 shadow-2xl shadow-black/40 backdrop-blur-sm">
       <div className="flex items-start justify-between border-b border-zinc-800 px-5 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Portfolio assistant</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">Curious about my work?</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
+            Portfolio assistant
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-white">
+            Curious about my work?
+          </h2>
         </div>
         <button
           aria-label="Close portfolio assistant"
@@ -96,7 +111,10 @@ export default function ChatBox() {
         </button>
       </div>
 
-      <div className="flex max-h-80 min-h-48 flex-col gap-3 overflow-y-auto px-5 py-5" aria-live="polite">
+      <div
+        className="flex max-h-80 min-h-48 flex-col gap-3 overflow-y-auto px-5 py-5"
+        aria-live="polite"
+      >
         {messages.map((message, index) => (
           <div
             className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
@@ -109,12 +127,25 @@ export default function ChatBox() {
             {message.content}
           </div>
         ))}
-        {isLoading && <div className="self-start rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-400">Thinking...</div>}
-        {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
+        {isLoading && (
+          <div className="self-start rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-400">
+            Thinking...
+          </div>
+        )}
+        {error && (
+          <p className="text-sm text-red-400" role="alert">
+            {error}
+          </p>
+        )}
       </div>
 
-      <form className="flex gap-3 border-t border-zinc-800 p-4" onSubmit={handleSubmit}>
-        <label className="sr-only" htmlFor="chat-message">Message</label>
+      <form
+        className="flex gap-3 border-t border-zinc-800 p-4"
+        onSubmit={handleSubmit}
+      >
+        <label className="sr-only" htmlFor="chat-message">
+          Message
+        </label>
         <input
           className="min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-cyan-400"
           id="chat-message"
