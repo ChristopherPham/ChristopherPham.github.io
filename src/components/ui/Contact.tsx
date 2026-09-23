@@ -13,7 +13,7 @@ function Contact() {
         <li>
           LinkedIn:{" "}
           <a
-            href="https://www.linkedin.com/in/example"
+            href="https://www.linkedin.com/in/christopher-pham-dev/"
             target="_blank"
             rel="noopener noreferrer"
           >

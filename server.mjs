@@ -1,9 +1,17 @@
 import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 
 const port = Number(process.env.PORT || 3001);
-const region = process.env.AWS_REGION || "us-west-2";
-const model = process.env.BEDROCK_MODEL || "openai.gpt-oss-20b-1:0";
+const model =
+  process.env.BEDROCK_MODEL ||
+  "gpt-4o-mini";
+const bearerToken =
+  process.env.AWS_bearer_token_bedrock ||
+  process.env.AWS_BEARER_TOKEN_BEDROCK;
+const baseURL =
+  process.env.AWS_GATEWAY_BASE_URL ||
+  process.env.AWS_BEDROCK_BASE_URL ;
 
 // Replace this with data from a database or CMS when the portfolio content grows.
 const portfolioContext = `
@@ -19,83 +27,142 @@ Portfolio information:
 - The site includes an AI portfolio assistant.
 `;
 
-const client = process.env.AWS_BEARER_TOKEN_BEDROCK
+const client = bearerToken
   ? new OpenAI({
-      apiKey: process.env.AWS_BEARER_TOKEN_BEDROCK,
-      baseURL: `https://bedrock-mantle.us-east-2.api.aws/v1`,
+      apiKey: bearerToken,
+      ...(baseURL ? { baseURL } : {}),
     })
   : null;
 
-function sendJson(response, status, body) {
-  response.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "http://localhost:5173",
-  });
+const responseHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
+};
+
+function jsonResponse(statusCode, body) {
+  return {
+    statusCode,
+    headers: responseHeaders,
+    body: JSON.stringify(body),
+  };
+}
+
+async function createChatResponse(requestBody) {
+  if (!client) {
+    return jsonResponse(500, {
+      error: "AWS_bearer_token_bedrock is not configured on the server.",
+    });
+  }
+
+  const messages = requestBody?.messages;
+  if (
+    !Array.isArray(messages) ||
+    messages.length === 0 ||
+    messages.some(
+      (message) =>
+        !message ||
+        !["user", "assistant"].includes(message.role) ||
+        typeof message.content !== "string" ||
+        !message.content.trim(),
+    )
+  ) {
+    return jsonResponse(400, { error: "A valid messages array is required." });
+  }
+
+  try {
+    const result = await client.responses.create({
+      model,
+      input: [
+        { role: "developer", content: portfolioContext },
+        ...messages,
+      ],
+    });
+
+    return jsonResponse(200, { message: result.output_text });
+  } catch (error) {
+    console.error("Chat request failed:", {
+      message: error?.message,
+      status: error?.status,
+      type: error?.type,
+      model,
+      baseURL,
+    });
+    return jsonResponse(500, {
+      error: "The assistant could not respond. Check the model, API key, and gateway/base URL configuration.",
+    });
+  }
+}
+
+// Lambda handler for API Gateway HTTP API or REST API proxy integration.
+export async function handler(event) {
+  console.log("I am working!");
+  const method = event.requestContext?.http?.method || event.httpMethod;
+  const path = event.rawPath || event.path;
+
+  if (method === "OPTIONS") {
+    return jsonResponse(204, {});
+  }
+
+  if (method !== "POST" || (path && !path.endsWith("/api/chat"))) {
+    return jsonResponse(404, { error: "Not found." });
+  }
+
+  if (!event.body || event.body.length > 100_000) {
+    return jsonResponse(400, { error: "A valid JSON body is required." });
+  }
+
+  try {
+    const body = event.isBase64Encoded
+      ? Buffer.from(event.body, "base64").toString("utf8")
+      : event.body;
+    return await createChatResponse(JSON.parse(body));
+  } catch (error) {
+    console.error("Chat request parsing failed:", error);
+    return jsonResponse(400, { error: "Request body must be valid JSON." });
+  }
+}
+
+function sendJson(response, statusCode, body) {
+  response.writeHead(statusCode, responseHeaders);
   response.end(JSON.stringify(body));
 }
 
-function readBody(request) {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    request.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 100_000) reject(new Error("Request is too large."));
-    });
-    request.on("end", () => resolve(JSON.parse(body)));
-    request.on("error", reject);
-  });
-}
-
-const server = createServer(async (request, response) => {
-  if (request.method === "OPTIONS") {
-    response.writeHead(204, { "Access-Control-Allow-Origin": "http://localhost:5173" });
-    response.end();
-    return;
-  }
-
+async function handleLocalRequest(request, response) {
   if (request.method !== "POST" || request.url !== "/api/chat") {
     sendJson(response, 404, { error: "Not found." });
     return;
   }
 
-  if (!client) {
-    sendJson(response, 500, { error: "AWS_BEARER_TOKEN_BEDROCK is not configured on the server." });
-    return;
-  }
-
   try {
-    const { messages } = await readBody(request);
-    const validMessages = Array.isArray(messages)
-      ? messages
-          .filter(
-            (message) =>
-              message &&
-              (message.role === "user" || message.role === "assistant") &&
-              typeof message.content === "string",
-          )
-          .map((message) => ({ role: message.role, content: message.content.slice(0, 4_000) }))
-      : [];
+    const requestBody = await new Promise((resolve, reject) => {
+      let body = "";
 
-    if (validMessages.length === 0) {
-      sendJson(response, 400, { error: "At least one message is required." });
-      return;
-    }
-
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: portfolioContext },
-        ...validMessages.slice(-20),
-      ],
-      max_tokens: 500,
+      request.on("data", (chunk) => {
+        body += chunk;
+        if (body.length > 100_000) reject(new Error("Request body is too large."));
+      });
+      request.on("end", () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          reject(new Error("Request body must be valid JSON."));
+        }
+      });
+      request.on("error", reject);
     });
-    sendJson(response, 200, { message: completion.choices[0]?.message?.content || "" });
-  } catch (error) {
-    console.error(error);
-    sendJson(response, 500, { error: "The assistant is temporarily unavailable." });
-  }
-});
 
-server.listen(port, () => {
-  console.log(`Chat API listening on http://localhost:${port}`);
-});
+    const result = await createChatResponse(requestBody);
+    sendJson(response, result.statusCode, JSON.parse(result.body));
+  } catch (error) {
+    console.error("Chat request parsing failed:", error);
+    sendJson(response, 400, { error: "Request body must be valid JSON." });
+  }
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const server = createServer(handleLocalRequest);
+  server.listen(port, () => {
+    console.log(`Chat server listening on http://localhost:${port}`);
+  });
+}
+
