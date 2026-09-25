@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 
@@ -11,10 +12,10 @@ const bearerToken =
   process.env.AWS_BEARER_TOKEN_BEDROCK;
 const baseURL =
   process.env.AWS_GATEWAY_BASE_URL ||
-  process.env.AWS_BEDROCK_BASE_URL ;
+  process.env.AWS_BEDROCK_BASE_URL;
 
 // Replace this with data from a database or CMS when the portfolio content grows.
-const portfolioContext = `
+let portfolioContext = `
 You are the assistant for Christopher Pham's software engineering portfolio.
 Use only the portfolio information included below and the conversation messages.
 Do not invent employers, dates, project details, technologies, or achievements.
@@ -26,6 +27,17 @@ Portfolio information:
 - The site is a React and TypeScript portfolio application.
 - The site includes an AI portfolio assistant.
 `;
+
+try {
+  portfolioContext = await readFile(
+    new URL("./portfolio-context.txt", import.meta.url),
+    "utf8",
+  );
+} catch (error) {
+  console.warn(
+    "portfolio-context.txt not found, falling back to default prompt.",
+  );
+}
 
 const client = bearerToken
   ? new OpenAI({

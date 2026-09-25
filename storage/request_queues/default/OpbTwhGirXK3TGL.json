@@ -1,0 +1,9 @@
+{
+	"id": "OpbTwhGirXK3TGL",
+	"json": "{\"id\":\"OpbTwhGirXK3TGL\",\"url\":\"http://localhost:5173/projects\",\"loadedUrl\":\"http://localhost:5173/projects\",\"uniqueKey\":\"http://localhost:5173/projects\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-09-25T01:34:39.413Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "http://localhost:5173/projects",
+	"url": "http://localhost:5173/projects"
+}

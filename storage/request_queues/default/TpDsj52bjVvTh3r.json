@@ -1,0 +1,9 @@
+{
+	"id": "TpDsj52bjVvTh3r",
+	"json": "{\"id\":\"TpDsj52bjVvTh3r\",\"url\":\"http://localhost:5173/\",\"loadedUrl\":\"http://localhost:5173/\",\"uniqueKey\":\"http://localhost:5173\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-09-25T01:34:39.339Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "http://localhost:5173",
+	"url": "http://localhost:5173/"
+}
